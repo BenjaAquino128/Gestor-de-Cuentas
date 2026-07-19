@@ -107,3 +107,12 @@ export function mismaPlataforma(a, b) {
   const nb = normalizarNombrePlataforma(b);
   return !!na && na === nb;
 }
+
+// Identidad de una cuenta para detectar duplicados al cargar:
+// misma plataforma + mismo correo. La contraseña no entra en la clave;
+// si difiere, se resuelve como conflicto (actualizar o rechazar).
+export function claveCuenta(cuenta) {
+  const plat = normalizarNombrePlataforma(cuenta.plataforma);
+  const correo = String(cuenta.correo || "").toLowerCase().trim();
+  return `${plat}|${correo}`;
+}

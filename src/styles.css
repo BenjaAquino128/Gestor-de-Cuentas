@@ -224,6 +224,21 @@ button, input, select, textarea {
   background: #25d366;
 }
 
+.whatsapp-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.whatsapp-url {
+  color: #166534;
+  font-size: 0.92rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+
 .btn-small {
   padding: 6px 10px;
   font-size: 0.85rem;
@@ -299,6 +314,16 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.buscador-cuentas {
+  flex: 1 1 260px;
+  min-width: 220px;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.9rem;
 }
 
 .selector-vista {
@@ -383,13 +408,59 @@ button, input, select, textarea {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 0;
+  padding: 14px 0;
   border-bottom: 1px solid #eee;
   flex-wrap: wrap;
 }
 
 .perfil-row:last-child {
   border-bottom: none;
+}
+
+.perfil-info {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+.perfil-controles {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.perfil-pin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #374151;
+  font-size: 0.98rem;
+}
+
+.perfil-row strong {
+  font-size: 1.1rem;
+}
+
+.perfil-row .badge {
+  font-size: 0.85rem;
+  padding: 3px 10px;
+}
+
+.perfil-row .card-sub {
+  color: #374151;
+  font-size: 0.98rem;
+  margin-top: 4px;
+}
+
+.perfil-row .input-secreto-compact input {
+  padding: 6px 10px;
+  font-size: 1rem;
+}
+
+.perfil-row .btn-ojito {
+  padding: 8px 11px;
+  font-size: 1.05rem;
 }
 
 .grupo-titulo {
@@ -444,7 +515,37 @@ button, input, select, textarea {
   padding-top: 8px;
 }
 
+.grupo-lista-contenido .card {
+  padding: 9px 12px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+}
+
+.grupo-lista-contenido .card-title {
+  margin-bottom: 2px;
+  font-size: 0.95rem;
+}
+
+.grupo-lista-contenido .card-sub {
+  font-size: 0.82rem;
+}
+
+.grupo-lista-contenido .cuenta-badges {
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.grupo-lista-contenido .badge {
+  padding: 1px 7px;
+  font-size: 0.73rem;
+}
+
 @media (max-width: 600px) {
+  .buscador-cuentas {
+    flex-basis: 100%;
+    min-width: 100%;
+  }
+
   .selector-vista {
     width: 100%;
     margin-left: 0;
@@ -460,6 +561,10 @@ button, input, select, textarea {
 
   .kanban-columna {
     flex-basis: 85vw;
+  }
+
+  .perfil-controles {
+    width: 100%;
   }
 }
 

@@ -6,8 +6,7 @@ import {
   agruparCuentasPorCorreo,
 } from "../lib/parser";
 import {
-  crearCuenta,
-  crearCuentasMasivo,
+  guardarCuentasSinDuplicar,
   listarPlataformas,
 } from "../lib/firestore";
 import {
@@ -69,6 +68,12 @@ function SelectPlataforma({ value, onChange, plataformas, required }) {
   );
 }
 
+function describirCuenta(cuenta) {
+  const plat = cuenta.plataforma || "Sin plataforma";
+  const correo = cuenta.correo || "sin correo";
+  return `${plat} · ${correo}`;
+}
+
 function prepararParaGuardar(cuenta) {
   const pinsPorPerfil = { ...(cuenta.pinsPorPerfil || {}) };
   const nums = (cuenta.numerosPerfiles || "")
@@ -98,6 +103,7 @@ export default function AgregarCuenta() {
   const [loteKey, setLoteKey] = useState(0);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  const [resultado, setResultado] = useState(null);
   const [plataformas, setPlataformas] = useState([]);
 
   useEffect(() => {
@@ -124,6 +130,7 @@ export default function AgregarCuenta() {
   }
 
   async function analizarVarias() {
+    setResultado(null);
     const lista = await listarPlataformas().catch(() => plataformas);
     setPlataformas(lista);
     const nombres = lista.map((p) => p.nombre);
@@ -154,6 +161,17 @@ export default function AgregarCuenta() {
     );
   }
 
+  // Misma plataforma + correo pero contraseña distinta: decide el usuario.
+  function resolverConflictoPass(existente, nueva) {
+    const ok = window.confirm(
+      `Ya tenés cargada esta cuenta con OTRA contraseña:\n\n` +
+        `${describirCuenta(nueva)}\n\n` +
+        `Aceptar = actualizar la contraseña de esa cuenta.\n` +
+        `Cancelar = no cargar este registro.`
+    );
+    return ok ? "actualizar" : "rechazar";
+  }
+
   async function handleGuardar(e) {
     e.preventDefault();
     setError("");
@@ -163,8 +181,26 @@ export default function AgregarCuenta() {
     }
     setGuardando(true);
     try {
-      const cuentaId = await crearCuenta(prepararParaGuardar(form));
-      navigate(`/cuentas/${cuentaId}`);
+      const resumen = await guardarCuentasSinDuplicar(
+        [prepararParaGuardar(form)],
+        resolverConflictoPass
+      );
+      if (resumen.creadas.length > 0) {
+        navigate(`/cuentas/${resumen.creadas[0].id}`);
+      } else if (resumen.actualizadas.length > 0) {
+        navigate(`/cuentas/${resumen.actualizadas[0].id}`);
+      } else if (resumen.mergeadas.length > 0) {
+        navigate(`/cuentas/${resumen.mergeadas[0].id}`);
+      } else {
+        const omitida = resumen.omitidas[0];
+        setError(
+          omitida?.motivo === "perfiles-existen"
+            ? "Esos perfiles ya estaban cargados en la cuenta."
+            : omitida?.motivo === "pass-distinta"
+              ? "No se cargó: ya existe esa cuenta con otra contraseña."
+              : "Esta cuenta ya está cargada (misma plataforma y correo)."
+        );
+      }
     } finally {
       setGuardando(false);
     }
@@ -180,8 +216,12 @@ export default function AgregarCuenta() {
     }
     setGuardando(true);
     try {
-      await crearCuentasMasivo(lote.map(prepararParaGuardar));
-      navigate("/");
+      const resumen = await guardarCuentasSinDuplicar(
+        lote.map(prepararParaGuardar),
+        resolverConflictoPass
+      );
+      setResultado(resumen);
+      setLote([]);
     } finally {
       setGuardando(false);
     }
@@ -231,6 +271,85 @@ export default function AgregarCuenta() {
       >
         {modo === "una" ? "Analizar texto" : "Analizar y previsualizar"}
       </button>
+
+      {resultado && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <div className="card-title">Resultado de la importación</div>
+          <div className="card-sub" style={{ marginTop: 6 }}>
+            {resultado.creadas.length} cargada
+            {resultado.creadas.length === 1 ? "" : "s"} ·{" "}
+            {resultado.mergeadas.length} con perfiles sumados ·{" "}
+            {resultado.actualizadas.length} con contraseña actualizada ·{" "}
+            {resultado.omitidas.length} omitida
+            {resultado.omitidas.length === 1 ? "" : "s"}
+          </div>
+
+          {resultado.actualizadas.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div className="card-sub" style={{ fontWeight: 600 }}>
+                Contraseña actualizada:
+              </div>
+              {resultado.actualizadas.map((a, i) => (
+                <div key={i} className="card-sub">
+                  {describirCuenta(a.cuenta)}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {resultado.mergeadas.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div className="card-sub" style={{ fontWeight: 600 }}>
+                Perfiles sumados a cuentas existentes:
+              </div>
+              {resultado.mergeadas.map((m, i) => (
+                <div key={i} className="card-sub">
+                  {describirCuenta(m.cuenta)} → perfil
+                  {m.perfiles.length === 1 ? "" : "es"} {m.perfiles.join(", ")}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {resultado.omitidas.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div className="card-sub" style={{ fontWeight: 600 }}>
+                Ya existían (no se cargaron):
+              </div>
+              {resultado.omitidas.map((o, i) => (
+                <div key={i} className="card-sub">
+                  {describirCuenta(o.cuenta)}
+                  {o.motivo === "perfiles-existen"
+                    ? " (perfiles ya cargados)"
+                    : o.motivo === "pass-distinta"
+                      ? " (otra contraseña, no actualizada)"
+                      : ""}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => navigate("/")}
+            >
+              Ir a cuentas
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setResultado(null);
+                setTextoProveedor("");
+              }}
+            >
+              Cargar más
+            </button>
+          </div>
+        </div>
+      )}
 
       {modo === "varias" && lote.length > 0 && (
         <div key={loteKey} style={{ marginTop: 20 }}>

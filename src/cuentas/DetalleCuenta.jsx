@@ -55,6 +55,32 @@ function Copiable({ etiqueta, valor }) {
   );
 }
 
+function WhatsappInfo({ numero }) {
+  const url = urlWhatsapp(numero);
+  if (!url) return null;
+
+  return (
+    <div className="whatsapp-info">
+      <a
+        className="btn btn-whatsapp btn-small"
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        WhatsApp
+      </a>
+      <a
+        className="whatsapp-url"
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {url}
+      </a>
+    </div>
+  );
+}
+
 function MenuPerfil({ estado, onAsignar, onEditar, onLiberar }) {
   const [abierto, setAbierto] = useState(false);
 
@@ -80,7 +106,7 @@ function MenuPerfil({ estado, onAsignar, onEditar, onLiberar }) {
               <button onClick={() => elegir(onAsignar)}>Marcar como vendido</button>
             )}
             {(estado === "Activo" || estado === "Vencido") && (
-              <button onClick={() => elegir(onEditar)}>Editar cliente</button>
+              <button onClick={() => elegir(onEditar)}>Editar perfil</button>
             )}
             {(estado === "Activo" || estado === "Vencido") && (
               <button onClick={() => elegir(onLiberar)}>Liberar perfil</button>
@@ -92,12 +118,29 @@ function MenuPerfil({ estado, onAsignar, onEditar, onLiberar }) {
   );
 }
 
+function formatearPYG(valor) {
+  const digitos = String(valor ?? "").replace(/\D/g, "");
+  if (!digitos) return "";
+  return digitos.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function aNumeroPYG(valor) {
+  const digitos = String(valor || "").replace(/\D/g, "");
+  return digitos ? Number(digitos) : "";
+}
+
+function telefonoInicial(valor) {
+  const telefono = String(valor || "").trim();
+  if (!telefono) return "+595";
+  return telefono.startsWith("+") ? telefono : `+${telefono}`;
+}
+
 function FormAsignar({ valoresIniciales, duracionDefault = 1, onConfirmar, onCancelar }) {
   const [clienteNombre, setClienteNombre] = useState(
     valoresIniciales?.clienteNombre || ""
   );
   const [clienteWhatsapp, setClienteWhatsapp] = useState(
-    valoresIniciales?.clienteWhatsapp || ""
+    telefonoInicial(valoresIniciales?.clienteWhatsapp)
   );
   const [duracionMeses, setDuracionMeses] = useState(
     valoresIniciales?.duracionMeses || duracionDefault || 1
@@ -107,7 +150,7 @@ function FormAsignar({ valoresIniciales, duracionDefault = 1, onConfirmar, onCan
     aInputDate(valoresIniciales?.fechaActivacion)
   );
   const [precioVenta, setPrecioVenta] = useState(
-    valoresIniciales?.precioVenta ?? ""
+    formatearPYG(valoresIniciales?.precioVenta)
   );
   const [error, setError] = useState("");
 
@@ -118,8 +161,8 @@ function FormAsignar({ valoresIniciales, duracionDefault = 1, onConfirmar, onCan
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!clienteWhatsapp.trim()) {
-      setError("El teléfono es obligatorio.");
+    if (clienteWhatsapp.replace(/\D/g, "").length <= 3) {
+      setError("Completá el número después de +595.");
       return;
     }
     onConfirmar({
@@ -127,7 +170,7 @@ function FormAsignar({ valoresIniciales, duracionDefault = 1, onConfirmar, onCan
       clienteWhatsapp,
       duracionMeses,
       fechaActivacion: desdeInputDate(fechaVenta),
-      precioVenta,
+      precioVenta: aNumeroPYG(precioVenta),
     });
   }
 
@@ -176,12 +219,13 @@ function FormAsignar({ valoresIniciales, duracionDefault = 1, onConfirmar, onCan
         Vence el: {formatFecha(vencimientoPreview)}
       </div>
       <div className="field">
-        <label>Precio de venta (opcional, referencia)</label>
+        <label>Precio de venta en PYG (opcional)</label>
         <input
-          type="number"
-          step="0.01"
+          type="text"
+          inputMode="numeric"
           value={precioVenta}
-          onChange={(e) => setPrecioVenta(e.target.value)}
+          onChange={(e) => setPrecioVenta(formatearPYG(e.target.value))}
+          placeholder="0"
         />
       </div>
       {error && <p className="error-msg">{error}</p>}
@@ -312,7 +356,6 @@ export default function DetalleCuenta() {
   if (!cuenta || perfiles === null) return <div className="page">Cargando...</div>;
 
   const privada = esCuentaPrivada(cuenta.modalidad);
-  const wa = urlWhatsapp(cuenta.clienteWhatsapp);
 
   return (
     <div className="page">
@@ -377,20 +420,17 @@ export default function DetalleCuenta() {
                   </div>
                   <div className="card-sub">
                     Venta: {formatFecha(cuenta.fechaActivacion)} ·{" "}
-                    {cuenta.duracionMeses || 1} mes(es) · vence{" "}
+                    {cuenta.duracionMeses || 1} mes(es) · Vence{" "}
                     {formatFecha(cuenta.fechaVencimiento)}
                   </div>
-                  <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-                    {wa && (
-                      <a
-                        className="btn btn-whatsapp btn-small"
-                        href={wa}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        WhatsApp
-                      </a>
+                  {cuenta.precioVenta !== null &&
+                    cuenta.precioVenta !== undefined && (
+                      <div className="card-sub">
+                        Precio de venta: {formatearPYG(cuenta.precioVenta)} PYG
+                      </div>
                     )}
+                  <WhatsappInfo numero={cuenta.clienteWhatsapp} />
+                  <div style={{ marginTop: 8 }}>
                     <button
                       type="button"
                       className="btn btn-secondary btn-small"
@@ -449,21 +489,32 @@ export default function DetalleCuenta() {
               return (
                 <div key={perfil.id}>
                   <div className="perfil-row">
-                    <div>
+                    <div className="perfil-info">
                       <strong>Perfil {perfil.numeroPerfil}</strong>{" "}
                       <span className={`badge ${BADGE_POR_ESTADO[estado]}`}>
                         {estado}
                       </span>
-                      <div
-                        className="card-sub"
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          marginTop: 4,
-                        }}
-                      >
-                        PIN:{" "}
+                      {(estado === "Activo" || estado === "Vencido") && (
+                        <div className="card-sub">
+                          {perfil.clienteNombre || "(sin nombre)"} · Vence{" "}
+                          {formatFecha(perfil.fechaVencimiento)}
+                        </div>
+                      )}
+                      {(estado === "Activo" || estado === "Vencido") &&
+                        perfil.precioVenta !== null &&
+                        perfil.precioVenta !== undefined && (
+                          <div className="card-sub">
+                            Precio de venta:{" "}
+                            {formatearPYG(perfil.precioVenta)} PYG
+                          </div>
+                        )}
+                      {(estado === "Activo" || estado === "Vencido") && (
+                        <WhatsappInfo numero={perfil.clienteWhatsapp} />
+                      )}
+                    </div>
+                    <div className="perfil-controles">
+                      <div className="perfil-pin">
+                        <span>PIN:</span>
                         <CampoSecreto
                           compact
                           value={perfil.pin || ""}
@@ -471,35 +522,29 @@ export default function DetalleCuenta() {
                             handleCambiarPin(perfil.id, e.target.value)
                           }
                           placeholder="----"
-                        />
+                      />
                       </div>
-                      {(estado === "Activo" || estado === "Vencido") && (
-                        <div className="card-sub">
-                          {perfil.clienteNombre || "(sin nombre)"} · vence{" "}
-                          {formatFecha(perfil.fechaVencimiento)}
-                        </div>
+                      {estado !== "Reservado" && (
+                        <MenuPerfil
+                          estado={estado}
+                          onAsignar={() =>
+                            setAccion({
+                              tipo: "perfil",
+                              perfilId: perfil.id,
+                              modo: "asignar",
+                            })
+                          }
+                          onEditar={() =>
+                            setAccion({
+                              tipo: "perfil",
+                              perfilId: perfil.id,
+                              modo: "editar",
+                            })
+                          }
+                          onLiberar={() => handleLiberar(perfil.id)}
+                        />
                       )}
                     </div>
-                    {estado !== "Reservado" && (
-                      <MenuPerfil
-                        estado={estado}
-                        onAsignar={() =>
-                          setAccion({
-                            tipo: "perfil",
-                            perfilId: perfil.id,
-                            modo: "asignar",
-                          })
-                        }
-                        onEditar={() =>
-                          setAccion({
-                            tipo: "perfil",
-                            perfilId: perfil.id,
-                            modo: "editar",
-                          })
-                        }
-                        onLiberar={() => handleLiberar(perfil.id)}
-                      />
-                    )}
                   </div>
                   {accionEnEsteFila && (
                     <FormAsignar

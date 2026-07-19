@@ -20,6 +20,7 @@ import {
 import { db } from "../firebase";
 import {
   calcularFechaVencimiento,
+  claveCuenta,
   esCuentaPrivada,
   mismaPlataforma,
   MODALIDAD_PRIVADA,
@@ -234,6 +235,105 @@ export async function crearCuentasMasivo(cuentas) {
     ids.push(await crearCuenta(cuenta));
   }
   return ids;
+}
+
+// Suma perfiles nuevos a una cuenta de perfiles ya existente.
+// No duplica números ya cargados. Devuelve los números realmente agregados.
+export async function agregarPerfilesACuenta(cuentaId, cuenta) {
+  const numeros = parseNumerosPerfiles(cuenta.numerosPerfiles) || [];
+  if (numeros.length === 0) return [];
+
+  const perfilesActuales = await listarPerfiles(cuentaId);
+  const yaExisten = new Set(perfilesActuales.map((p) => Number(p.numeroPerfil)));
+  const nuevos = numeros.filter((n) => !yaExisten.has(Number(n)));
+  if (nuevos.length === 0) return [];
+
+  const pinsPorPerfil = cuenta.pinsPorPerfil || {};
+  const batch = writeBatch(db);
+  const perfilesRef = collection(db, "cuentas", cuentaId, "perfiles");
+  for (const numeroPerfil of nuevos) {
+    const pinDePerfil =
+      pinsPorPerfil[String(numeroPerfil)] ||
+      pinsPorPerfil[numeroPerfil] ||
+      "";
+    batch.set(doc(perfilesRef), {
+      numeroPerfil,
+      pin: pinDePerfil,
+      estado: "Libre",
+      plataforma: cuenta.plataforma,
+    });
+  }
+  await batch.commit();
+
+  await updateDoc(doc(db, "cuentas", cuentaId), {
+    cantidadPerfiles: yaExisten.size + nuevos.length,
+  });
+  return nuevos;
+}
+
+// Guarda cuentas evitando duplicados (misma plataforma + correo).
+// - Contraseña distinta: pregunta con onConflictoPass -> "actualizar" | "rechazar".
+// - Privada repetida (misma pass): se omite con aviso.
+// - Perfiles repetida: suma solo los perfiles nuevos a la cuenta existente.
+// Devuelve un resumen para mostrar en pantalla.
+export async function guardarCuentasSinDuplicar(nuevas, onConflictoPass) {
+  const existentes = await listarCuentas();
+  const indice = new Map();
+  for (const c of existentes) indice.set(claveCuenta(c), c);
+
+  const resumen = { creadas: [], mergeadas: [], actualizadas: [], omitidas: [] };
+
+  for (const nueva of nuevas) {
+    const clave = claveCuenta(nueva);
+    const existente = indice.get(clave);
+
+    if (!existente) {
+      const id = await crearCuenta(nueva);
+      resumen.creadas.push({ id, cuenta: nueva });
+      indice.set(clave, { ...nueva, id });
+      continue;
+    }
+
+    const passExistente = String(existente.contrasena || "").trim();
+    const passNueva = String(nueva.contrasena || "").trim();
+    let actualizadaPass = false;
+
+    if (passNueva && passExistente && passExistente !== passNueva) {
+      const decision = onConflictoPass
+        ? await onConflictoPass(existente, nueva)
+        : "rechazar";
+      if (decision !== "actualizar") {
+        resumen.omitidas.push({ cuenta: nueva, motivo: "pass-distinta" });
+        continue;
+      }
+      await updateDoc(doc(db, "cuentas", existente.id), {
+        contrasena: passNueva,
+      });
+      existente.contrasena = passNueva;
+      actualizadaPass = true;
+      resumen.actualizadas.push({ id: existente.id, cuenta: nueva });
+    }
+
+    const esPerfiles =
+      !esCuentaPrivada(nueva.modalidad) && !esCuentaPrivada(existente.modalidad);
+
+    if (esPerfiles) {
+      const agregados = await agregarPerfilesACuenta(existente.id, nueva);
+      if (agregados.length > 0) {
+        resumen.mergeadas.push({
+          id: existente.id,
+          cuenta: nueva,
+          perfiles: agregados,
+        });
+      } else if (!actualizadaPass) {
+        resumen.omitidas.push({ cuenta: nueva, motivo: "perfiles-existen" });
+      }
+    } else if (!actualizadaPass) {
+      resumen.omitidas.push({ cuenta: nueva, motivo: "ya-existe" });
+    }
+  }
+
+  return resumen;
 }
 
 export async function actualizarCuenta(cuentaId, datos) {

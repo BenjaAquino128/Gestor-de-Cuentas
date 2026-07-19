@@ -55,6 +55,7 @@ function estaPorVencer(fecha) {
 
 export default function ListaCuentas() {
   const [cuentas, setCuentas] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
   const [filtroPlataforma, setFiltroPlataforma] = useState("");
   const [soloConLibres, setSoloConLibres] = useState(false);
   const [vista, setVista] = useState("kanban");
@@ -72,6 +73,7 @@ export default function ListaCuentas() {
           return {
             ...cuenta,
             perfilesLibres: 0,
+            textoClientes: `${cuenta.clienteNombre || ""} ${cuenta.clienteWhatsapp || ""}`,
             porVencer:
               cuenta.vendida && estaPorVencer(cuenta.fechaVencimiento),
           };
@@ -83,7 +85,10 @@ export default function ListaCuentas() {
         const porVencer = perfiles.some(
           (p) => p.estado === "Activo" && estaPorVencer(p.fechaVencimiento)
         );
-        return { ...cuenta, perfilesLibres: libres, porVencer };
+        const textoClientes = perfiles
+          .map((p) => `${p.clienteNombre || ""} ${p.clienteWhatsapp || ""}`)
+          .join(" ");
+        return { ...cuenta, perfilesLibres: libres, porVencer, textoClientes };
       })
     );
     setCuentas(conResumen);
@@ -96,7 +101,19 @@ export default function ListaCuentas() {
 
   const cuentasFiltradas = useMemo(() => {
     if (!cuentas) return [];
+    const termino = busqueda.toLowerCase().trim();
     return cuentas.filter((c) => {
+      if (termino) {
+        const texto = [
+          c.correo,
+          c.plataforma,
+          c.modalidad,
+          c.textoClientes,
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!texto.includes(termino)) return false;
+      }
       if (filtroPlataforma && c.plataforma !== filtroPlataforma) return false;
       if (soloConLibres) {
         if (esCuentaPrivada(c.modalidad)) return false;
@@ -104,7 +121,7 @@ export default function ListaCuentas() {
       }
       return true;
     });
-  }, [cuentas, filtroPlataforma, soloConLibres]);
+  }, [cuentas, busqueda, filtroPlataforma, soloConLibres]);
 
   const agrupadas = useMemo(() => {
     const grupos = {};
@@ -129,6 +146,14 @@ export default function ListaCuentas() {
   return (
     <div className="page page-cuentas">
       <div className="filtros">
+        <input
+          className="buscador-cuentas"
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por correo, cliente o plataforma"
+          aria-label="Buscar cuentas"
+        />
         <select
           value={filtroPlataforma}
           onChange={(e) => setFiltroPlataforma(e.target.value)}
