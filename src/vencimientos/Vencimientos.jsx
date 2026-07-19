@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
-import { listarTodosLosPerfiles } from "../lib/firestore";
-import { colorVencimiento, formatFecha, estadoEfectivo } from "../lib/fechas";
+import { listarVencimientos } from "../lib/firestore";
+import {
+  colorVencimiento,
+  formatFecha,
+  etiquetaVencimiento,
+  urlWhatsapp,
+  diasHasta,
+} from "../lib/fechas";
 
-// Botón que abre el chat de WhatsApp del cliente en una pestaña nueva.
-// Definido acá adentro porque solo lo usa esta pantalla.
 function BotonWhatsapp({ numero }) {
-  if (!numero) return null;
-  const url = `https://wa.me/${numero}`;
+  const url = urlWhatsapp(numero);
+  if (!url) return null;
   return (
     <a
       className="btn btn-whatsapp btn-small"
@@ -20,40 +24,56 @@ function BotonWhatsapp({ numero }) {
 }
 
 export default function Vencimientos() {
-  const [perfiles, setPerfiles] = useState(null);
+  const [items, setItems] = useState(null);
 
   useEffect(() => {
-    listarTodosLosPerfiles().then((lista) => {
-      const conCliente = lista
-        .filter((p) => p.estado === "Activo" && p.fechaVencimiento)
-        .sort((a, b) => a.fechaVencimiento - b.fechaVencimiento);
-      setPerfiles(conCliente);
+    listarVencimientos().then((lista) => {
+      // ≤1 día primero; dentro de cada grupo, por fecha de vencimiento.
+      lista.sort((a, b) => {
+        const da = diasHasta(a.fechaVencimiento);
+        const db = diasHasta(b.fechaVencimiento);
+        const urgA = da !== null && da <= 1 ? 0 : 1;
+        const urgB = db !== null && db <= 1 ? 0 : 1;
+        if (urgA !== urgB) return urgA - urgB;
+        return a.fechaVencimiento - b.fechaVencimiento;
+      });
+      setItems(lista);
     });
   }, []);
 
-  if (perfiles === null) return <div className="page">Cargando...</div>;
+  if (items === null) return <div className="page">Cargando...</div>;
 
   return (
     <div className="page">
       <h2>Vencimientos</h2>
-      {perfiles.length === 0 && (
-        <div className="vacio">No hay perfiles activos todavía.</div>
+      {items.length === 0 && (
+        <div className="vacio">No hay ventas activas todavía.</div>
       )}
-      {perfiles.map((perfil) => (
-        <div key={perfil.id} className={`card ${colorVencimiento(perfil.fechaVencimiento)}`}>
-          <div className="card-title">{perfil.clienteNombre}</div>
-          <div className="card-sub">
-            {perfil.plataforma} · Perfil {perfil.numeroPerfil}
+      {items.map((item) => {
+        const etiqueta = etiquetaVencimiento(item.fechaVencimiento);
+        return (
+          <div
+            key={item.id}
+            className={`card ${colorVencimiento(item.fechaVencimiento)}`}
+          >
+            <div className="card-title">
+              {item.clienteNombre}{" "}
+              {etiqueta && (
+                <span className="badge badge-vencido">{etiqueta}</span>
+              )}
+            </div>
+            <div className="card-sub">
+              {item.plataforma} · {item.detalle}
+            </div>
+            <div className="card-sub">
+              Vence: {formatFecha(item.fechaVencimiento)}
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <BotonWhatsapp numero={item.clienteWhatsapp} />
+            </div>
           </div>
-          <div className="card-sub">
-            Vence: {formatFecha(perfil.fechaVencimiento)}
-            {estadoEfectivo(perfil) === "Vencido" && " (ya vencido)"}
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <BotonWhatsapp numero={perfil.clienteWhatsapp} />
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

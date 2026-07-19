@@ -7,6 +7,8 @@ import ListaCuentas from "./cuentas/ListaCuentas";
 import AgregarCuenta from "./cuentas/AgregarCuenta";
 import DetalleCuenta from "./cuentas/DetalleCuenta";
 import Vencimientos from "./vencimientos/Vencimientos";
+import Plataformas from "./plataformas/Plataformas";
+import DetallePlataforma from "./plataformas/DetallePlataforma";
 
 // Menú de usuario (⋮): vive acá porque solo lo usa la barra superior.
 function MenuUsuario() {
@@ -52,6 +54,7 @@ export default function App() {
             Cuentas
           </NavLink>
           <NavLink to="/vencimientos">Vencimientos</NavLink>
+          <NavLink to="/plataformas">Plataformas</NavLink>
           <MenuUsuario />
         </nav>
       </div>
@@ -60,6 +63,8 @@ export default function App() {
         <Route path="/nueva" element={<AgregarCuenta />} />
         <Route path="/cuentas/:cuentaId" element={<DetalleCuenta />} />
         <Route path="/vencimientos" element={<Vencimientos />} />
+        <Route path="/plataformas" element={<Plataformas />} />
+        <Route path="/plataformas/:nombre" element={<DetallePlataforma />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>

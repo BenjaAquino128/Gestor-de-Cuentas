@@ -1,4 +1,4 @@
-// Funciones puras de fechas: no dependen de React ni de Firebase.
+// Helpers puros (fechas + teléfono): no dependen de React ni de Firebase.
 
 export function calcularFechaVencimiento(fechaActivacion, duracionMeses) {
   if (!fechaActivacion || !duracionMeses) return null;
@@ -36,6 +36,32 @@ export function formatFecha(fecha) {
   });
 }
 
+// Para <input type="date"> (YYYY-MM-DD en hora local).
+export function aInputDate(fecha) {
+  const d = fecha ? new Date(fecha) : new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function desdeInputDate(valor) {
+  if (!valor) return new Date();
+  const [y, m, d] = valor.split("-").map(Number);
+  // Mediodía local para evitar corrimientos por zona horaria.
+  return new Date(y, m - 1, d, 12, 0, 0);
+}
+
+// Texto corto para resaltar vencimientos inminentes en la lista.
+export function etiquetaVencimiento(fecha) {
+  const dias = diasHasta(fecha);
+  if (dias === null) return "";
+  if (dias < 0) return "Ya vencido";
+  if (dias === 0) return "Vence hoy";
+  if (dias === 1) return "Vence mañana";
+  return "";
+}
+
 // Un perfil "Activo" cuya fecha de vencimiento ya pasó se considera vencido,
 // aunque en la base todavía diga "Activo" (se corrige al leer, sin escribir).
 export function estadoEfectivo(perfil) {
@@ -44,4 +70,40 @@ export function estadoEfectivo(perfil) {
     if (dias !== null && dias < 0) return "Vencido";
   }
   return perfil.estado;
+}
+
+// Deja solo dígitos: "+595 986 111-222" -> "595986111222".
+export function normalizarTelefono(valor) {
+  if (!valor) return "";
+  return String(valor).replace(/\D/g, "");
+}
+
+export function urlWhatsapp(telefono) {
+  const digitos = normalizarTelefono(telefono);
+  return digitos ? `https://wa.me/${digitos}` : "";
+}
+
+export const MODALIDAD_PERFILES = "Perfiles compartidos";
+export const MODALIDAD_PRIVADA = "Cuenta individual privada";
+
+export function esCuentaPrivada(modalidad) {
+  return (
+    modalidad === MODALIDAD_PRIVADA ||
+    modalidad === "Cuenta privada" // compatibilidad con datos viejos
+  );
+}
+
+// Misma plataforma aunque cambien mayúsculas, espacios o símbolos.
+export function normalizarNombrePlataforma(nombre) {
+  return String(nombre || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+export function mismaPlataforma(a, b) {
+  const na = normalizarNombrePlataforma(a);
+  const nb = normalizarNombrePlataforma(b);
+  return !!na && na === nb;
 }

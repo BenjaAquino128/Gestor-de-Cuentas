@@ -15,6 +15,7 @@ body {
 
 a {
   color: inherit;
+  text-decoration: none;
 }
 
 button, input, select, textarea {
@@ -26,6 +27,11 @@ button, input, select, textarea {
   max-width: 720px;
   margin: 0 auto;
   padding: 12px 16px 90px;
+}
+
+.page-cuentas {
+  width: 100%;
+  max-width: none;
 }
 
 .topbar {
@@ -140,6 +146,21 @@ button, input, select, textarea {
 .badge-reservado { background: #eee3fb; color: #6b3fa0; }
 .badge-activo { background: #e3edfb; color: #1e5aa0; }
 .badge-vencido { background: #fbe3e3; color: #a01e1e; }
+.badge-stock { background: #dcfce7; color: #166534; }
+.badge-completo { background: #dbeafe; color: #1d4ed8; }
+.badge-parcial { background: #fef3c7; color: #92400e; }
+.badge-por-vencer { background: #fee2e2; color: #b91c1c; }
+
+.cuenta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.cuenta-badges + .card-sub {
+  margin-top: 6px;
+}
 
 .row-verde { border-left: 4px solid #2e9e4f; }
 .row-amarillo { border-left: 4px solid #d6a710; background: #fffdf3; }
@@ -226,6 +247,40 @@ button, input, select, textarea {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.input-secreto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.input-secreto input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  min-width: 0;
+}
+
+.input-secreto-compact input {
+  padding: 4px 8px;
+  font-size: 0.9rem;
+}
+
+.btn-ojito {
+  background: #e5e7eb;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .filtros {
@@ -244,6 +299,70 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.selector-vista {
+  display: flex;
+  margin-left: auto;
+  padding: 2px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.selector-vista button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.selector-vista button.activo {
+  background: #2563eb;
+  color: #fff;
+}
+
+.kanban {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding-bottom: 12px;
+  overflow-x: auto;
+}
+
+.kanban-columna {
+  flex: 1 0 280px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #e9ebef;
+}
+
+.kanban-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.kanban-cantidad {
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #d4d7dd;
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.kanban-tarjetas .card:last-child {
+  margin-bottom: 0;
 }
 
 .copiable {
@@ -279,6 +398,69 @@ button, input, select, textarea {
   text-transform: uppercase;
   color: #888;
   margin: 18px 0 6px;
+}
+
+.grupo-lista {
+  margin-bottom: 10px;
+}
+
+.grupo-lista-cabecera {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #e1e4e9;
+  color: #4b5563;
+  cursor: pointer;
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.grupo-lista-cabecera:hover {
+  background: #d8dce2;
+}
+
+.grupo-flecha {
+  width: 12px;
+  font-size: 0.65rem;
+}
+
+.grupo-lista-cantidad {
+  min-width: 22px;
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #c8cdd5;
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.grupo-lista-contenido {
+  padding-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .selector-vista {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .selector-vista button {
+    flex: 1;
+  }
+
+  .kanban {
+    align-items: stretch;
+  }
+
+  .kanban-columna {
+    flex-basis: 85vw;
+  }
 }
 
 .vacio {
